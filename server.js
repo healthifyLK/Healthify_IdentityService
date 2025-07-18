@@ -1,6 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const sequelize = require("./config/sequelize");
+const morgan = require("morgan");
 const passport =require('passport')
 const session = require('express-session')
 const passportConfig = require('./config/passport')
@@ -12,6 +13,7 @@ const PORT = process.env.PORT || 5002;
 const app = express();
 
 // Middleware
+app.use(morgan());
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,

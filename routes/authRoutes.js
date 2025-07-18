@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
-const { registerUser } = require("../controllers/auth-controller");
+const { registerUser, loginUser } = require("../controllers/auth-controller");
+
 
 // Define auth routes
 
@@ -10,19 +11,25 @@ const { registerUser } = require("../controllers/auth-controller");
 router.post("/register", registerUser);
 
 // Start Google OAuth2.0 authentication
+// Tested and working
 router.get(
-  "/auth/google",
+  "/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
 // Google OAuth2.0 callback
+// Tested and working
 router.get(
-  "/auth/google/callback",
+  "/google/callback",
   passport.authenticate("google", { failureRedirect: "/login" }),
   (req, res) => {
     // Successful authentication
     res.json({ message: "Logged in with Google!", user: req.user });
   }
 );
+
+// POST /api/auth/login
+// Login a user
+router.post("/login", loginUser);
 
 module.exports = router;
