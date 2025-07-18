@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
-const { registerUser, loginUser } = require("../controllers/auth-controller");
+const { registerUser, loginUser, requestPasswordReset, resetPassword } = require("../controllers/auth-controller");
 
 
 // Define auth routes
@@ -31,5 +31,13 @@ router.get(
 // POST /api/auth/login
 // Login a user
 router.post("/login", loginUser);
+
+// POST /api/auth/request-password-reset
+// Request a password reset
+router.post("/request-password-reset", requestPasswordReset);
+
+// POST /api/auth/reset-password
+// Reset a user's password
+router.post("/reset-password", resetPassword);
 
 module.exports = router;
