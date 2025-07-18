@@ -2,7 +2,13 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 const { Op } = require("sequelize");
-const { generateAccessToken, generateRefreshToken } = require("../utils/jwt");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+  generateTemporaryToken,
+  validateTemporaryToken,
+} = require("../utils/jwt");
+const { sendEmail } = require("../utils/email");
 require("dotenv").config();
 
 // Register a new user
@@ -95,7 +101,77 @@ const loginUserService = async ({ email, password }) => {
   }
 };
 
+// Request password reset
+const requestPasswordResetService = async ({ email }) => {
+  try {
+    // Check if user exists
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const payload = {
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    };
+
+    // Generate temporary token
+    const tempToken = generateTemporaryToken(payload);
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${tempToken}`;
+
+    // Send email with reset link
+    await sendEmail({
+      to: user.email,
+      subject: "Password Reset Request",
+      html: `
+        <p>Hello ${user.username},</p>
+        <p>You have requested a password reset. Click the link below to reset your password:</p>
+        <a href="${resetLink}">Reset Password</a>
+        <p>If you did not request a password reset, please ignore this email.</p>
+        `,
+    });
+
+    // Return success message
+    return {
+      message: "Password reset email sent",
+    };
+  } catch (error) {
+    // Log the error for debugging
+    console.error("Error in requestPasswordResetService:", error);
+
+    // Rethrow the error so the controller can handle it
+    throw new Error(error.message || "Password reset request failed");
+  }
+};
+
+// Reset password
+const resetPasswordService = async ({ token, newPassword }) => {
+  try {
+    const payload = validateResetToken(token);
+    if (!payload) throw new Error("Invalid or expired token");
+
+    const user = await User.findByPk(payload.userId);
+    if (!user) throw new Error("User not found");
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    return { message: "Password has been reset successfully." };
+  } catch (error) {
+    // Log the error for debugging
+    console.error("Error in resetPasswordService:", error);
+
+    // Rethrow the error so the controller can handle it
+    throw new Error(error.message || "Failed to reset password");
+  }
+};
+
 module.exports = {
   registerUserService,
   loginUserService,
+  requestPasswordResetService,
+  resetPasswordService,
 };

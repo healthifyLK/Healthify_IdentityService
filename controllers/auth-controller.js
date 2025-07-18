@@ -1,4 +1,4 @@
-const { registerUserService, loginUserService } = require("../services/auth-service");
+const { registerUserService, loginUserService, requestPasswordResetService, resetPasswordService } = require("../services/auth-service");
 
 const registerUser = async (req, res) => {
   try {
@@ -24,6 +24,8 @@ const loginUser = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
+
+
 
 module.exports = {
   registerUser,
