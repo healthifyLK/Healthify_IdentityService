@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
-const { registerUser, loginUser, requestPasswordReset, resetPassword } = require("../controllers/auth-controller");
+const { registerUser, loginUser, requestPasswordReset, resetPassword, requestLoginCode, verifyLoginCode } = require("../controllers/auth-controller");
 
 
 // Define auth routes
@@ -31,6 +31,14 @@ router.get(
 // POST /api/auth/login
 // Login a user
 router.post("/login", loginUser);
+
+// POST /api/auth/request-login-code
+// Request a login code
+router.post("/request-login-code", requestLoginCode);
+
+// POST /api/auth/verify-login-code
+// Verify a login code and login
+router.post("/verify-login-code", verifyLoginCode);
 
 // POST /api/auth/request-password-reset
 // Request a password reset

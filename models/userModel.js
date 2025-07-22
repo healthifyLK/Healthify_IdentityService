@@ -33,6 +33,14 @@ const User = sequelize.define('users',{
         type: DataTypes.BOOLEAN,
         defaultValue: true,
     },
+    loginCode:{
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    loginCodeExpiresAt:{
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
     createdAt: {
         type: DataTypes.DATE,
         allowNull: true,

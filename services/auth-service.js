@@ -8,7 +8,12 @@ const {
   generateTemporaryToken,
   validateTemporaryToken,
 } = require("../utils/jwt");
-const { sendEmail } = require("../utils/email");
+const {
+  sendRegistrationSuccessEmail,
+  sendPasswordResetEmail,
+  sendLoginCodeEmail,
+} = require("./emailService");
+const { generateLoginCode } = require("../utils/loginCodeGeneration");
 require("dotenv").config();
 
 // Register a new user
@@ -34,6 +39,8 @@ const registerUserService = async ({ username, email, password, role }) => {
       password: hashedPassword,
       role,
     });
+    // Send registration success email
+    await sendRegistrationSuccessEmail(user);
 
     // Return registration success message
     return {
@@ -122,16 +129,7 @@ const requestPasswordResetService = async ({ email }) => {
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${tempToken}`;
 
     // Send email with reset link
-    await sendEmail({
-      to: user.email,
-      subject: "Password Reset Request",
-      html: `
-        <p>Hello ${user.username},</p>
-        <p>You have requested a password reset. Click the link below to reset your password:</p>
-        <a href="${resetLink}">Reset Password</a>
-        <p>If you did not request a password reset, please ignore this email.</p>
-        `,
-    });
+    await sendPasswordResetEmail(user, resetLink);
 
     // Return success message
     return {
@@ -149,7 +147,7 @@ const requestPasswordResetService = async ({ email }) => {
 // Reset password
 const resetPasswordService = async ({ token, newPassword }) => {
   try {
-    const payload = validateResetToken(token);
+    const payload = validateTemporaryToken(token);
     if (!payload) throw new Error("Invalid or expired token");
 
     const user = await User.findByPk(payload.userId);
@@ -169,9 +167,87 @@ const resetPasswordService = async ({ token, newPassword }) => {
   }
 };
 
+// Request Login Code
+const requestLoginCodeService = async ({ email }) => {
+  try {
+    const user = await User.findOne({ where: { email } });
+    if (!user) throw new Error("User not found");
+
+    const loginCode = generateLoginCode();
+    const loginCodeExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    user.loginCode = loginCode;
+    user.loginCodeExpiresAt = loginCodeExpiresAt;
+    await user.save();
+
+    // Send login code email
+    await sendLoginCodeEmail(user, loginCode);
+
+    return { message: "Verification code sent to your email." };
+  } catch (error) {
+    // Log the error for debugging
+    console.error("Error in requestLoginCodeService:", error);
+
+    // Rethrow the error so the controller can handle it
+    throw new Error(error.message || "Failed to request login code");
+  }
+};
+
+// Verify Login Code and login
+const verifyLoginCodeService = async ({ email, code }) => {
+  try {
+    const user = await User.findOne({ where: { email } });
+    if (!user) throw new Error("User not found");
+
+    if (
+      !user.loginCode ||
+      !user.loginCodeExpiresAt ||
+      user.loginCode !== code ||
+      new Date() > user.loginCodeExpiresAt
+    ) {
+      throw new Error("Invalid or expired code");
+    }
+
+    // Clear login code and expiry
+    user.loginCode = null;
+    user.loginCodeExpiresAt = null;
+    await user.save();
+
+    // Generate tokens
+    const payload = {
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    };
+
+    const accessToken = generateAccessToken(payload);
+    const refreshToken = generateRefreshToken(payload);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    };
+  } catch (error) {
+    // Log the error for debugging
+    console.error("Error in verifyLoginCodeService:", error);
+
+    // Rethrow the error so the controller can handle it
+    throw new Error(error.message || "Failed to verify login code");
+  }
+};
+
 module.exports = {
   registerUserService,
   loginUserService,
   requestPasswordResetService,
   resetPasswordService,
+  requestLoginCodeService,
+  verifyLoginCodeService,
 };

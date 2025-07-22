@@ -3,6 +3,8 @@ const {
   loginUserService,
   requestPasswordResetService,
   resetPasswordService,
+  requestLoginCodeService,
+  verifyLoginCodeService,
 } = require("../services/auth-service");
 
 const registerUser = async (req, res) => {
@@ -33,6 +35,7 @@ const loginUser = async (req, res) => {
 const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
+    console.log(email);
     const result = await requestPasswordResetService({ email });
     res.status(200).json(result);
   } catch (error) {
@@ -50,9 +53,33 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// Request Login Code
+const requestLoginCode = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const result = await requestLoginCodeService({ email });
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Verify Login Code and login
+const verifyLoginCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    const result = await verifyLoginCodeService({ email, code });
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   requestPasswordReset,
   resetPassword,
+  requestLoginCode,
+  verifyLoginCode,
 };
